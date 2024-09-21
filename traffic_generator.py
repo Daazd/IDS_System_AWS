@@ -1,6 +1,7 @@
 from trex_stl_lib.api import STLClient, STLProfile, STLStream, STLPktBuilder, STLTXCont, STLError
 from scapy.all import Ether, IP, UDP, TCP
 import time
+from terraform_output_reader import get_terraform_output_reader
 
 class TRexTrafficGenerator:
     def __init__(self, server):
@@ -55,7 +56,7 @@ class TRexTrafficGenerator:
             print(f"Error generating traffic: {e}")
 
 if __name__ == "__main__":
-    trex_server_ip = "your_trex_ec2_public_ip"  # Replace with your TRex EC2 instance's public IP
+    trex_server_ip = get_terraform_output_reader('trex_instance_public_ip') # Getting the TRex server IP from Terraform output
     generator = TRexTrafficGenerator(server=trex_server_ip)
     
     try:

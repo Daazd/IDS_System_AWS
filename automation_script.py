@@ -3,6 +3,8 @@
 import os
 import subprocess
 import sys
+import time
+import signal
 import configparser
 from IDS_visualization import IDSVisualizer
 import matplotlib.pyplot as plt
@@ -15,6 +17,66 @@ from alert_generation import AlertGenerator
 from aws import AWSManager
 from terraform_output_reader import get_terraform_output
 
+IDS_PID_FILE = '/tmp/ids_pid.txt'
+
+def start_ids():
+    try:
+        # Start the IDS process
+        process = subprocess.Popen([sys.executable, "main.py"], 
+                                   stdout=subprocess.DEVNULL, 
+                                   stderr=subprocess.DEVNULL)
+        
+        # Save the PID to a file
+        with open(IDS_PID_FILE, 'w') as f:
+            f.write(str(process.pid))
+        
+        print(f"IDS started with PID {process.pid}. It's running in the background.")
+    except Exception as e:
+        print(f"An error occurred while starting the IDS: {e}")
+
+def stop_ids():
+    if os.path.exists(IDS_PID_FILE):
+        with open(IDS_PID_FILE, 'r') as f:
+            pid = int(f.read().strip())
+        try:
+            os.kill(pid, signal.SIGTERM)
+            print(f"Sent termination signal to IDS process with PID {pid}")
+            
+            # Wait for the process to terminate
+            for _ in range(10):  # Wait up to 10 seconds
+                time.sleep(1)
+                try:
+                    os.kill(pid, 0)  # Check if process still exists
+                except OSError:
+                    print("IDS process has terminated.")
+                    os.remove(IDS_PID_FILE)
+                    return
+            
+            print("IDS process did not terminate. Forcing shutdown...")
+            os.kill(pid, signal.SIGKILL)
+        except ProcessLookupError:
+            print("IDS process not found. It may have already been stopped.")
+        except Exception as e:
+            print(f"An error occurred while stopping the IDS: {e}")
+        finally:
+            if os.path.exists(IDS_PID_FILE):
+                os.remove(IDS_PID_FILE)
+    else:
+        print("No running IDS process found.")
+
+def check_ids_status():
+    if os.path.exists(IDS_PID_FILE):
+        with open(IDS_PID_FILE, 'r') as f:
+            pid = int(f.read().strip())
+        try:
+            os.kill(pid, 0)  # This will raise an OSError if the process is not running
+            print(f"IDS is running with PID {pid}")
+        except OSError:
+            print("IDS process not found, but PID file exists. Cleaning up...")
+            os.remove(IDS_PID_FILE)
+    else:
+        print("IDS is not running")
+        
 def run_script(script_name, *args):
     script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), script_name)
     if not os.path.exists(script_path):
@@ -38,7 +100,7 @@ def terraform_menu():
         print("3. Plan")
         print("4. Apply")
         print("5. Destroy")
-        print("6. Show")
+        print("6. State List")
         print("7. Import")
         print("8. Back to main menu")
         
@@ -72,62 +134,32 @@ def terraform_menu():
             print("Invalid choice. Please try again.")
 
 def run_ids():
-    # Dynamically get TRex server IP
-    trex_server_ip = get_terraform_output('trex_instance_public_ip')
-    if not trex_server_ip:
-        print("Failed to retrieve TRex instance IP from Terraform output.")
-        return
-
-    trex_generator = TRexTrafficGenerator(server=trex_server_ip)
-    traffic_capture = TrafficCapture()
-    feature_extractor = FeatureExtractor()
-    anomaly_detector = AnomalyDetector()
-    alert_generator = AlertGenerator()
-    aws_manager = AWSManager(
-        sns_topic_arn='arn:aws:sns:us-west-2:123456789012:ids-alerts',
-        lambda_function_name='ids_model_update',
-        s3_bucket_name='ids-ml-models-{suffix}',
-        dynamodb_table_name='ids-alerts'
-    )
+    print("\nIDS Menu:")
+    print("1. Start IDS")
+    print("2. Stop IDS (if running)")
+    print("3. Back to main menu")
     
-    visualizer = IDSVisualizer()
-    visualizer.setup_matplotlib()
-    ani = FuncAnimation(visualizer.fig, visualizer.update_plot, frames=100, interval=500, blit=True)
-    plt.show(block=False)
-
-    print("Starting IDS...")
-    try:
-        trex_generator.connect()
+    choice = input("Enter your choice (1-3): ")
+    
+    if choice == '1':
+        try:
+            subprocess.Popen([sys.executable, "main.py"])
+            print("IDS started. It's running in the background.")
+        except Exception as e:
+            print(f"An error occurred while starting the IDS: {e}")
+    elif choice == '2':
         
-        # Generate and capture mixed traffic
-        print("Generating mixed traffic...")
-        trex_generator.generate_normal_traffic(duration=300)  # 5 minutes of normal traffic
-        trex_generator.generate_attack_traffic(duration=60)   # 1 minute of attack traffic
-        packets = traffic_capture.capture_packets()
-
-        # Process captured packets
-        features = feature_extractor.extract_features(packets)
-        anomalies = anomaly_detector.detect_anomalies(features)
-
-        # Handle detected anomalies
-        for i, is_anomaly in enumerate(anomalies):
-            if is_anomaly:
-                alert = alert_generator.generate_alert({
-                    'timestamp': str(packets[i].time),
-                    'source_ip': packets[i].ip.src,
-                    'destination_ip': packets[i].ip.dst
-                })
-                aws_manager.save_anomaly(alert)
-                aws_manager.send_notification(alert)
-
-        # Update and save model
-        aws_manager.invoke_lambda({'action': 'update_model'})
-        aws_manager.save_model(anomaly_detector, 'anomaly_detector')
-
+        print("Stopping IDS...")
+    elif choice == '3':
+        return
+    else:
+        print("Invalid choice. Please try again.")
+    try:
+        subprocess.run([sys.executable, "main.py"], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"An error occurred while running the IDS: {e}")
     except KeyboardInterrupt:
-        print("\nStopping IDS...")
-    finally:
-        trex_generator.disconnect()
+        print("\nIDS execution was interrupted by user.")
 
 def main_menu():
     while True:

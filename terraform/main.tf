@@ -225,9 +225,9 @@ resource "aws_sns_topic" "ids_alerts" {
 }
 
 # Lambda
-resource "aws_lambda_function" "ids_alert_processor" {
+resource "aws_lambda_function" "ids_model_update" {
   filename      = "lambda_function.zip"
-  function_name = "ids_alert_processor"
+  function_name = "ids_model_update"
   role          = aws_iam_role.lambda_role.arn
   handler       = "lambda_function.lambda_handler"
   runtime       = "python3.8"
