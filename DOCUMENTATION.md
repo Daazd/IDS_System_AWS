@@ -1,4 +1,3 @@
-place holder for documentation and articles which will help
 ## Unsupervised Clustering Training Utilizing Keras
 https://www.dlology.com/blog/how-to-do-unsupervised-clustering-with-keras/
 ### placeholder for write up
