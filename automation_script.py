@@ -9,11 +9,11 @@ import configparser
 from IDS_visualization import IDSVisualizer
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-from traffic_generator import TRexTrafficGenerator
-from traffic_capture import TrafficCapture
-from feature_extractor import FeatureExtractor
-from anomaly_detection import AnomalyDetector
-from alert_generation import AlertGenerator
+# from traffic_generator import TRexTrafficGenerator
+# from traffic_capture import TrafficCapture
+# from feature_extractor import FeatureExtractor
+# from anomaly_detection import AnomalyDetector
+# from alert_generation import AlertGenerator
 from aws import AWSManager
 from terraform_output_reader import get_terraform_output
 
@@ -137,7 +137,8 @@ def run_ids():
     print("\nIDS Menu:")
     print("1. Start IDS")
     print("2. Stop IDS (if running)")
-    print("3. Back to main menu")
+    print("3. Run IDS with visualization")
+    print("4. Back to main menu")
     
     choice = input("Enter your choice (1-3): ")
     
@@ -151,6 +152,9 @@ def run_ids():
         
         print("Stopping IDS...")
     elif choice == '3':
+        subprocess.Popen([sys.executable, "IDS_visualization.py"])
+        print("Running IDS Visualizer...")
+    elif choice == '4':
         return
     else:
         print("Invalid choice. Please try again.")

@@ -5,7 +5,7 @@ import subprocess
 import numpy as np
 from sklearn.metrics import confusion_matrix, classification_report
 from botocore.exceptions import ClientError
-from anomaly_detection import AnomalyDetector  # Import your actual anomaly detection class
+from anomaly_detection import AnomalyDetector  
 from traffic_generator import TRexTrafficGenerator
 from feature_extractor import FeatureExtractor
 from terraform_output_reader import get_terraform_output
@@ -72,13 +72,10 @@ def evaluate_model(trex_server_ip):
         if not trex_server_ip:
             raise ValueError("Failed to retrieve TRex instance IP from Terraform output")
         
-        # Set up S3 client
         s3 = boto3.client('s3')
         
-        # Dynamically get the bucket name
         bucket_name = get_bucket_name()
         
-        # Get the latest model key
         model_key = get_latest_model_key(s3, bucket_name)
         
         print(f"Loading model from bucket: {bucket_name}, key: {model_key}")

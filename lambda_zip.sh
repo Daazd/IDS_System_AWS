@@ -1,10 +1,8 @@
 #!/bin/bash
 
-# Create a temporary directory for the Lambda function
 mkdir lambda_temp
 cd lambda_temp
 
-# Create the Lambda function file
 cat << EOF > lambda_function.py
 import boto3
 import json
